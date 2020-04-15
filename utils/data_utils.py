@@ -10,13 +10,30 @@ from __future__ import division
 from __future__ import absolute_import
 import os
 import random
+import math
 import fnmatch
 import numpy as np
 from scipy import misc
 
-def deprocess(x):
+from os import environ
+environ['SCIPY_PIL_IMAGE_VIEWER'] = '/usr/bin/gwenview'
+
+
+def deprocess(x, img_shape):
     # [-1,1] -> [0, 255]
-    return (x+1.0)*127.5
+    x = (x+1.0)*127.5
+    full_image = np.zeros(img_shape, dtype=float)
+    ww = x.shape[1]
+    hh = x.shape[2]
+    cntr = 0
+    for i in xrange(int(math.ceil(img_shape[0]/(hh * 1.0)))):
+        for j in xrange(int(math.ceil(img_shape[1] / (ww * 1.0)))):
+            cw = min(hh * i + hh, img_shape[0])
+            cd = min(ww * j + ww, img_shape[1])
+            full_image[hh * i: cw, ww * j: cd] = x[cntr][0: cw - hh * i, 0: cd - ww * j]
+            cntr += 1
+    return x
+
 
 def preprocess(x):
     # [0,255] -> [-1, 1]
@@ -51,9 +68,19 @@ def getPaths(data_dir):
     return np.asarray(image_paths)
 
 def read_and_resize(path, img_res):
-    img = misc.imread(path, mode='RGB').astype(np.float)  
-    img = misc.imresize(img, img_res)
-    return img
+    img = misc.imread(path, mode='RGB').astype(np.float)
+    img_shape = img.shape
+    ww = img_res[0]
+    hh = img_res[1]
+    img_lst = list()
+    for i in xrange(int(math.ceil(img_shape[0]/(hh * 1.0)))):
+        for j in xrange(int(math.ceil(img_shape[1] / (ww * 1.0)))):
+            cropped_img = np.zeros((hh, ww, 3), dtype=np.float)
+            cw = min(hh * i + hh, img_shape[0])
+            cd = min(ww * j + ww, img_shape[1])
+            cropped_img[0: cw - hh * i, 0: cd - ww * j] = img[hh * i: cw, ww * j: cd]
+            img_lst.append(cropped_img)
+    return np.asarray(img_lst), img_shape
 
 def read_and_resize_pair(pathA, pathB, img_res):
     img_A = misc.imread(pathA, mode='RGB').astype(np.float)  

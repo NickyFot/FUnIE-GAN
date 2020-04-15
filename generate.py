@@ -39,12 +39,11 @@ for root, dirs, files in os.walk(test_paths):
         if not img_path.lower().endswith('.jpg'):
             continue
         img_name = ntpath.basename(img_path).split('.')[0]
-        im = read_and_resize(os.path.join(root, img_path), (256, 256))
+        im, shape = read_and_resize(os.path.join(root, img_path), (256, 256))
         im = preprocess(im)
-        im = np.expand_dims(im, axis=0)
         s = time.time()
         gen = funie_gan_generator.predict(im)
-        gen = deprocess(gen)
+        gen = deprocess(gen, shape)
         tot = time.time()-s
         times.append(tot)
         misc.imsave(os.path.join(root, img_name+'_gen.png'), gen[0])
